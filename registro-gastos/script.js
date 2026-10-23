@@ -41,9 +41,13 @@ function formatearPesos(valor) {
 // CLAVE_GASTOS. Recuerda: localStorage solo guarda texto
 // → empaca el arreglo con JSON.stringify.
 // ============================================================
-function guardarGastos() {
   // Tu código aquí
+
+function guardarGastos() {
+    localStorage.setItem(CLAVE_GASTOS, JSON.stringify(gastos));
 }
+
+
 
 // ============================================================
 // Ejercicio 02 · cargarGastos(): leer sin que un dato roto tumbe la app
@@ -56,6 +60,18 @@ function guardarGastos() {
 // ============================================================
 function cargarGastos() {
   // Tu código aquí
+
+  const guardado = localStorage.getItem(CLAVE_GASTOS);
+    if (!guardado) {
+        gastos = [];
+        return;
+    }
+    try {
+        gastos = JSON.parse(guardado);
+    } catch (error) {
+        gastos = [];
+    }
+
 }
 
 // ============================================================
@@ -70,6 +86,18 @@ function cargarGastos() {
 // ============================================================
 function crearGasto(descripcion, monto, categoria) {
   // Tu código aquí
+
+  const descripcionLimpia = descripcion.trim();
+    if (descripcionLimpia === "" || Number.isNaN(monto) || monto <= 0) {
+        return null;
+    }
+    return {
+        descripcion: descripcionLimpia,
+        monto: monto,
+        categoria: categoria,
+        fecha: new Date().toISOString()
+    };
+
 }
 
 // ============================================================
@@ -85,6 +113,21 @@ function crearGasto(descripcion, monto, categoria) {
 // ============================================================
 function agregarGasto() {
   // Tu código aquí
+
+  const nuevoGasto = crearGasto(
+        inputDescripcion.value,
+        Number(inputMonto.value),
+        selectCategoria.value
+    );
+    if (nuevoGasto === null) {
+        return;
+    }
+    gastos.push(nuevoGasto);
+    inputDescripcion.value = "";
+    inputMonto.value = "";
+    guardarGastos();
+    actualizarTodo();
+
 }
 
 // ============================================================
@@ -96,11 +139,22 @@ function agregarGasto() {
 // No compares el texto completo: la hora casi nunca es la misma.
 // ============================================================
 function esDeHoy(gasto) {
-  // Tu código aquí
+    // Tu código aquí
+
+    const fechaGasto = new Date(gasto.fecha);
+    const hoy = new Date();
+    return fechaGasto.getDate() === hoy.getDate() &&
+           fechaGasto.getMonth() === hoy.getMonth() &&
+           fechaGasto.getFullYear() === hoy.getFullYear();
 }
 
 function esDeEsteMes(gasto) {
   // Tu código aquí
+
+    const fechaGasto = new Date(gasto.fecha);
+    const hoy = new Date();
+    return fechaGasto.getMonth() === hoy.getMonth() &&
+           fechaGasto.getFullYear() === hoy.getFullYear();
 }
 
 // ============================================================
@@ -113,10 +167,19 @@ function esDeEsteMes(gasto) {
 // ============================================================
 function sumarMontos(lista) {
   // Tu código aquí
+
+    return lista.reduce((acumulado, gasto) => acumulado + gasto.monto, 0);
+
 }
 
 function mostrarTotales() {
   // Tu código aquí
+
+    const gastosHoy = gastos.filter(esDeHoy);
+    const gastosMes = gastos.filter(esDeEsteMes);
+    totalHoy.textContent = formatearPesos(sumarMontos(gastosHoy));
+    totalMes.textContent = formatearPesos(sumarMontos(gastosMes));
+
 }
 
 // ============================================================
@@ -128,6 +191,16 @@ function mostrarTotales() {
 // ============================================================
 function mostrarCategorias() {
   // Tu código aquí
+
+    listaCategorias.innerHTML = "";
+    for (let i = 0; i < CATEGORIAS.length; i++) {
+        const categoria = CATEGORIAS[i];
+        const gastosCategoria = gastos.filter(gasto => gasto.categoria === categoria);
+        const total = sumarMontos(gastosCategoria);
+        const li = document.createElement("li");
+        li.textContent = `${categoria}: ${formatearPesos(total)}`;
+        listaCategorias.appendChild(li);
+    }
 }
 
 // ============================================================
@@ -140,6 +213,21 @@ function mostrarCategorias() {
 // ============================================================
 function mostrarLista() {
   // Tu código aquí
+  listaGastos.innerHTML = "";
+    for (let i = 0; i < gastos.length; i++) {
+        const gasto = gastos[i];
+        if (filtroActual !== "Todas" && gasto.categoria !== filtroActual) {
+            continue;
+        }
+        const li = document.createElement("li");
+        li.textContent = `${gasto.descripcion} – ${formatearPesos(gasto.monto)} (${gasto.categoria})`;
+        const boton = document.createElement("button");
+        boton.className = "eliminar";
+        boton.textContent = "Eliminar";
+        boton.dataset.index = i;
+        li.appendChild(boton);
+        listaGastos.appendChild(li);
+    }
 }
 
 // ============================================================
@@ -152,6 +240,14 @@ function mostrarLista() {
 // ============================================================
 function eliminarGasto(evento) {
   // Tu código aquí
+
+  if (!evento.target.classList.contains("eliminar")) {
+        return;
+    }
+    const posicion = Number(evento.target.dataset.index);
+    gastos.splice(posicion, 1);
+    guardarGastos();
+    actualizarTodo();
 }
 
 // ============================================================
@@ -166,10 +262,22 @@ function eliminarGasto(evento) {
 // ============================================================
 function cambiarFiltro() {
   // Tu código aquí
+
+    filtroActual = filtroLista.value;
+    sessionStorage.setItem(CLAVE_FILTRO, filtroActual);
+    mostrarLista();
 }
 
 function cargarFiltro() {
   // Tu código aquí
+
+    const guardado = sessionStorage.getItem(CLAVE_FILTRO);
+    if (guardado === null) {
+        filtroActual = "Todas";
+    } else {
+        filtroActual = guardado;
+    }
+    filtroLista.value = filtroActual;
 }
 
 // ===== Pintar todo (ya viene lista) =====
